@@ -33,5 +33,20 @@ After installation, the equivalent console command is:
 devagent
 ```
 
+The agent can run shell commands, read and search files, and create, overwrite,
+or edit files. `glob` and `grep` are read-only. In the interactive CLI,
+`bash`, `edit_file`, and `write_file` calls pause for approval:
+
+```text
+permission requested: edit_file({'file_path': 'notes.txt', ...})
+  [y] allow once  [a] always allow this tool  [n] deny:
+```
+
+Use `y` to allow one call, `a` to remember approval for that tool, or `n` to
+refuse it. For non-interactive use, pass `--yes` to approve tool calls
+automatically.
+
 The `.env` file is loaded automatically and is not committed to Git. VS Code
 can launch the same module through the **Debug devagent** configuration.
+Hello
+hello1

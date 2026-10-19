@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "devagent"
 version = "0.1.0"
 description = "Initial Python scaffold for devagent."
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     { name = "devagent" },
 ]
@@ -31,4 +31,4 @@ devagent = "src.cli:main"
 
 [tool.ruff]
 line-length = 130
-target-version = "py310"
+target-version = "py311"

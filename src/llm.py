@@ -14,7 +14,14 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from openai import APIConnectionError, APIError, APITimeoutError, BadRequestError, OpenAI, RateLimitError
+from openai import (
+    APIConnectionError,
+    APIError,
+    APITimeoutError,
+    BadRequestError,
+    OpenAI,
+    RateLimitError,
+)
 
 
 @dataclass
@@ -232,7 +239,8 @@ class LLM:
             # reasoning_content is the DeepSeek/Kimi dialect, reasoning is
             # what aggregators like OpenRouter normalize it to
             reasoning = getattr(delta, "reasoning_content", None) or getattr(
-                delta, "reasoning", None)
+                delta, "reasoning", None
+            )
             if reasoning and on_reasoning:
                 on_reasoning(reasoning)
 
@@ -284,66 +292,12 @@ class LLM:
             except (RateLimitError, APITimeoutError, APIConnectionError):
                 if attempt == max_retries - 1:
                     raise
-                wait = 2 ** attempt
+                wait = 2**attempt
                 time.sleep(wait)
             except APIError as e:
                 # retry 5xx server errors but not 4xx; base APIError has no status_code so read it defensively
                 status_code = getattr(e, "status_code", None)
                 if status_code and status_code >= 500 and attempt < max_retries - 1:
-                    time.sleep(2 ** attempt)
-                else:
-                    raise
-
-
-class LiteLLM(LLM):
-    """LLM backend via LiteLLM, supporting 100+ providers.
-
-    Use this when your target provider is NOT OpenAI-compatible
-    (AWS Bedrock, Google Vertex, Cohere, etc.) or when you want
-    a single interface to switch between any provider by changing
-    the model string.
-
-    Set CORECODER_PROVIDER=litellm and use LiteLLM model strings
-    like ``anthropic/claude-3-haiku``, ``bedrock/anthropic.claude-v2``,
-    ``vertex_ai/gemini-pro``, etc.
-    """
-
-    def __init__(
-        self,
-        model: str,
-        api_key: str | None = None,
-        base_url: str | None = None,
-        **kwargs,
-    ):
-        # skip LLM.__init__ which creates an OpenAI client
-        self.model = model
-        self.api_key = api_key
-        self.base_url = base_url
-        self.extra = kwargs
-        self.total_prompt_tokens = 0
-        self.total_completion_tokens = 0
-
-    def _call_with_retry(self, params: dict, max_retries: int = 3):
-        """Retry on transient errors with exponential backoff via litellm."""
-        import litellm
-
-        params["drop_params"] = True
-        if self.api_key:
-            params["api_key"] = self.api_key
-        if self.base_url:
-            params["api_base"] = self.base_url
-
-        for attempt in range(max_retries):
-            try:
-                return litellm.completion(**params)
-            except Exception as e:
-                err = str(e).lower()
-                is_transient = any(
-                    kw in err
-                    for kw in ["rate_limit", "timeout", "connection", "502", "503", "529"]
-                )
-                is_server = any(kw in err for kw in ["500", "502", "503", "504"])
-                if (is_transient or is_server) and attempt < max_retries - 1:
-                    time.sleep(2 ** attempt)
+                    time.sleep(2**attempt)
                 else:
                     raise
