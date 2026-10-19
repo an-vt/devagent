@@ -58,15 +58,16 @@ def main() -> None:
         max_tokens=config.max_tokens,
     )
 
+    if args.yes:
+        permission = Permission(allow_all=True)
+    else:
+        permission = Permission(ask=_ask_permission, persist_path=DEFAULT_STORE)
+
     agent = Agent(
         llm=llm,
-        tools=[*ALL_TOOLS],
-        # tools=[*ALL_TOOLS, *load_mcp_tools()],
+        tools=[*ALL_TOOLS],  # todo: mcp
         max_context_tokens=config.max_context_tokens,
-        permission=Permission(allow_all=args.yes)
-        if args.yes
-        else Permission(ask=_ask_permission, persist_path=DEFAULT_STORE),
-        # hooks=load_hooks(),
+        permission=permission,
     )
 
     # interactive REPL
@@ -96,7 +97,9 @@ def _repl(agent: Agent, config: Config):
             reasoning_streamed: list[str] = []
             answer_started = False
 
-            def on_token(token: str, streamed=streamed, reasoning_streamed=reasoning_streamed) -> None:
+            def on_token(
+                token: str, streamed=streamed, reasoning_streamed=reasoning_streamed
+            ) -> None:
                 nonlocal answer_started
                 if reasoning_streamed and not answer_started:
                     print("\n\nAnswer:\n", end="", flush=True)
@@ -141,7 +144,11 @@ def _ask_permission(tool_name: str, arguments: dict) -> str:
         f"[cyan]{tool_name}[/cyan]({_brief(arguments)})"
     )
     try:
-        answer = pt_prompt("  [y] allow once  [a] always allow this tool  [n] deny: ").strip().lower()
+        answer = (
+            pt_prompt("  [y] allow once  [a] always allow this tool  [n] deny: ")
+            .strip()
+            .lower()
+        )
     except (EOFError, KeyboardInterrupt):
         console.print("[dim]denied[/dim]")
         return "deny"

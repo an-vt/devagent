@@ -32,8 +32,12 @@ class AgentTool(Tool):
         "required": ["task"],
     }
 
-    # set by Agent.__init__ after construction
-    _parent_agent = None
+    def __init__(self):
+        self._parent_agent = None
+
+    def bind_parent(self, parent) -> None:
+        """Attach the parent agent that owns this tool instance."""
+        self._parent_agent = parent
 
     def execute(self, task: str) -> str:
         if self._parent_agent is None:
@@ -46,11 +50,10 @@ class AgentTool(Tool):
         sub = Agent(
             llm=parent.llm,
             tools=[t for t in parent.tools if t.name != "agent"],  # no recursive agents
-            max_context_tokens=parent.context.max_tokens,
+            max_context_tokens=parent.max_context_tokens,
             max_rounds=20,
-            # the sub-agent answers to the same consent layer and hooks as the parent
+            # Mutating sub-agent tool calls use the same user consent behavior.
             permission=parent.permission,
-            hooks=parent.hooks,
         )
 
         # a sub-agent failure comes back as text, never propagates into the parent
