@@ -3,6 +3,7 @@
 import concurrent.futures
 import inspect
 
+from .context import ContextManager
 from .llm import LLM
 from .prompt import system_prompt
 from .tools import ALL_TOOLS
@@ -27,6 +28,7 @@ class Agent:
         # instance even when the default registry is shared globally.
         self.tools = [AgentTool() if isinstance(tool, AgentTool) else tool for tool in configured_tools]
         self.max_context_tokens = max_context_tokens
+        self.context = ContextManager(max_tokens=max_context_tokens)
         self.max_rounds = max_rounds
         self.permission = permission
         self.messages: list[dict] = []
@@ -56,6 +58,7 @@ class Agent:
     def chat(self, user_input: str, on_token=None, on_tool=None, on_reasoning=None) -> str:
         """Process one user message, executing tool calls until text is returned."""
         self.messages.append({"role": "user", "content": user_input})
+        self.context.maybe_compress(self.messages, self.llm)
 
         for _ in range(self.max_rounds):
             response = self.llm.chat(
@@ -89,6 +92,7 @@ class Agent:
                         "tool_call_id": tool_call.id,
                         "content": result,
                     })
+                self.context.maybe_compress(self.messages, self.llm)
             except KeyboardInterrupt:
                 self._answer_pending_tool_calls(response.tool_calls)
                 raise
