@@ -81,7 +81,8 @@ def _repl(agent: Agent, config: Config):
 
     while True:
         try:
-            user_input = input("devagent> ")
+            prompt = "devagent (plan)> " if agent.plan_mode else "devagent> "
+            user_input = input(prompt)
         except KeyboardInterrupt:
             console.print("\nExiting REPL.")
             break
@@ -91,6 +92,23 @@ def _repl(agent: Agent, config: Config):
 
         if not user_input.strip():
             continue
+
+        if user_input.strip() == "/plan":
+            agent.plan_mode = not agent.plan_mode
+            if agent.plan_mode:
+                console.print(
+                    "[yellow]Plan mode on.[/] The agent can investigate with "
+                    "read-only tools and present a plan. Type [bold]approve[/bold] "
+                    "to accept the plan, or [bold]/plan[/bold] again to exit."
+                )
+            else:
+                console.print("[yellow]Plan mode off.[/]")
+            continue
+
+        if agent.plan_mode and user_input.strip().lower() in ("approve", "/approve"):
+            agent.plan_mode = False
+            console.print("[yellow]Plan mode off.[/]")
+            user_input = "approve"
 
         try:
             streamed: list[str] = []

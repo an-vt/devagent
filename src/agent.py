@@ -5,7 +5,8 @@ import inspect
 
 from .context import ContextManager
 from .llm import LLM
-from .prompt import system_prompt
+from .permissions import Permission
+from .prompt import PLAN_MODE_PROMPT, system_prompt
 from .tools import ALL_TOOLS
 from .tools.agent import AgentTool
 from .tools.todo import TodoWriteTool
@@ -31,6 +32,7 @@ class Agent:
         self.context = ContextManager(max_tokens=max_context_tokens)
         self.max_rounds = max_rounds
         self.permission = permission
+        self.plan_mode = False
         self.messages: list[dict] = []
         self._tool_by_name = {tool.name: tool for tool in self.tools}
         self._system = system_prompt(self.tools)
@@ -45,6 +47,8 @@ class Agent:
     def _full_messages(self) -> list[dict]:
         """Return system instructions followed by the conversation history."""
         system = self._system
+        if self.plan_mode:
+            system += "\n\n" + PLAN_MODE_PROMPT
         if self._todo is not None:
             rendered = self._todo.render()
             if rendered:
@@ -100,7 +104,14 @@ class Agent:
         return "(reached maximum tool-call rounds)"
 
     def _permit(self, name: str, arguments: dict) -> str | None:
-        """Ask for consent before a tool mutates state."""
+        """Apply plan-mode restrictions before normal tool consent."""
+        if self.plan_mode and name not in Permission.READ_ONLY:
+            return (
+                "Plan mode is on, so this call was refused: plan mode is "
+                "read-only. Do not retry it. Keep investigating with the "
+                "read-only tools, then present the plan and stop. The user can "
+                'approve it by typing "approve", or exit plan mode with /plan.'
+            )
         if self.permission is None:
             return None
         return self.permission.check(name, arguments)

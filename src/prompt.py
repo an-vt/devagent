@@ -3,6 +3,13 @@
 import os
 import platform
 
+PLAN_MODE_PROMPT = """\
+# Plan mode
+Plan mode is on: the user wants a plan, not changes yet. Investigate with the
+read-only tools only; every mutating call is refused. Once you understand the
+task, present the plan as a numbered list and stop. Do not execute any of it
+until the user approves."""
+
 
 def system_prompt(tools) -> str:
     """Build the instructions sent to the model before conversation history."""
