@@ -2,6 +2,10 @@
 
 devagent is a small, interactive coding agent that runs in your terminal. It uses an LLM to understand software engineering requests, inspect a project, and use local development tools to help complete tasks.
 
+![devagent working in plan mode in the terminal](demo.jpg)
+
+*devagent investigating a coding task in read-only plan mode.*
+
 ## What it does
 
 - Answers questions about a codebase using file and content search.
