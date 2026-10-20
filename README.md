@@ -1,13 +1,40 @@
 # devagent
 
-## Requirements
+devagent is a small, interactive coding agent that runs in your terminal. It uses an LLM to understand software engineering requests, inspect a project, and use local development tools to help complete tasks.
 
-- Python 3.11 or newer
+## What it does
 
-## Development setup
+- Answers questions about a codebase using file and content search.
+- Reads, creates, and edits files.
+- Runs shell commands with user approval.
+- Tracks multi-step work with a session checklist.
+- Delegates independent tasks to sub-agents.
+- Runs multiple tool calls concurrently when the model requests them together.
+- Streams model responses and compresses older conversation context when needed.
 
-Create and activate a virtual environment, then install the project and its
-development dependencies:
+Tools that can change files or run commands request approval. Use `/plan` to investigate a task in read-only mode, or `--yes` to automatically approve tool calls.
+
+## How it works
+
+1. The CLI sends the conversation and available tool definitions to the configured LLM.
+2. The agent handles the streamed response. If the model requests tools, devagent runs them and returns their results to the model.
+3. The agent repeats this cycle until it has a response for the user.
+
+The code is organized around the agent loop, an LLM client, a permission handler, and a collection of tools in `src/tools/`.
+
+## Tech stack
+
+- **Python 3.11+** — application and agent implementation
+- **OpenAI Python SDK** — streaming chat completions and tool calling with OpenAI-compatible APIs
+- **Rich** — terminal output
+- **prompt_toolkit** — interactive permission prompts
+- **python-dotenv** — load configuration from a local `.env` file
+- **Hatchling** — package and build configuration
+- **Ruff** — optional linting and development dependency
+
+## Getting started
+
+Requirements: Python 3.11 or newer and an API key for your chosen model provider.
 
 ```sh
 python -m venv .venv
@@ -15,44 +42,50 @@ source .venv/bin/activate
 pip install -e .
 ```
 
-Create the local environment file and add your API key:
+Create a `.env` file in the project root and set your provider credentials:
 
-```sh
-cp .env.example .env
+```dotenv
+OPENAI_API_KEY=your-api-key
+OPENAI_BASE_URL=https://api.deepseek.com
+MODEL=deepseek-v4-flash
 ```
 
-Start the interactive agent from the repository root:
+Start the interactive CLI:
 
 ```sh
 python -m src
 ```
 
-After installation, the equivalent console command is:
+After installation, you can also run:
 
 ```sh
 devagent
 ```
 
-The agent can run shell commands, read and search files, create, overwrite, or
-edit files, and delegate tasks to sub-agents. Multiple tool calls returned
-together by the model run concurrently. `glob` and `grep` are read-only. In the
-interactive CLI, `bash`, `edit_file`, `write_file`, and `agent` calls pause for
-approval:
+To automatically approve tool calls:
 
-```text
-permission requested: edit_file({'file_path': 'notes.txt', ...})
-  [y] allow once  [a] always allow this tool  [n] deny:
+```sh
+devagent --yes
 ```
 
-Use `y` to allow one call, `a` to remember approval for that tool, or `n` to
-refuse it. For non-interactive use, pass `--yes` to approve tool calls
-automatically.
+## Configuration
 
-For multi-step work, the agent can manage an in-memory checklist with
-`todo_write`. The current checklist is included in the model context each turn
-and is cleared when the conversation is reset.
+Configuration is read from environment variables and the project’s `.env` file.
 
-The `.env` file is loaded automatically and is not committed to Git. VS Code
-can launch the same module through the **Debug devagent** configuration.
-Hello
-hello1
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `OPENAI_API_KEY` | API key for the configured provider | Required |
+| `OPENAI_BASE_URL` | OpenAI-compatible API endpoint | DeepSeek API |
+| `MODEL` | Model name | `deepseek-v4-flash` |
+| `MAX_TOKENS` | Maximum response tokens | `4096` |
+| `TEMPERATURE` | Response temperature | `0` |
+| `MAX_CONTEXT_TOKENS` | Conversation context limit | `128000` |
+| `LOG_LEVEL` | Application log level | `INFO` |
+
+## Development
+
+Run the test suite with Python’s built-in unittest runner:
+
+```sh
+python -m unittest discover -s tests
+```
